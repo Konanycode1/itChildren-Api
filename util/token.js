@@ -1,4 +1,4 @@
-import { sign, verify } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 
 /**
@@ -9,7 +9,7 @@ import { sign, verify } from "jsonwebtoken";
 export const generateJWT = async (userToken)=>{
     let keySecret = process.env.JWT_SECRET
     if(!keySecret) throw new Error("Error secret code")
-    let token = await sign(userToken, keySecret,{
+    let token = await jwt.sign(userToken, keySecret,{
         expiresIn: 3600*24*1000
     });
     return token
@@ -18,7 +18,7 @@ export const generateJWT = async (userToken)=>{
 export const verifyToken = async (tokenSend)=>{
     try {
         let keySecret = process.env.JWT_SECRET
-        return verify(token, keySecret)
+        return jwt.verify(tokenSend, keySecret)
     } catch (e) {
         console.log("error for code", e)
         return false
