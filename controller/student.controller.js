@@ -1,3 +1,4 @@
+
 import student from "../model/student.js";
 import { generateJWT, verifyToken } from "../util/token.js";
 import { bcryptPass, comparePass } from "../util/crypt.js";
