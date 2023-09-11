@@ -1,19 +1,32 @@
-import Student from "../model/student";
-import { generateJWT, verifyToken } from "../util/token";
-import { bcryptPass, comparePass } from "../util/crypt";
+import student from "../model/student.js";
+import { generateJWT, verifyToken } from "../util/token.js";
+import { bcryptPass, comparePass } from "../util/crypt.js";
 import  MongooseError  from "mongoose";
-import { matric } from "../util/matricule";
+import { matric } from "../util/matricule.js";
 
-export class Student {
+class Student {
 
     static async  create(req, res){
-        const {nom,logo, password, ...body} = req.body;
+        const {nom,email,logo, password, ...body} = req.body;
         try {
-            const userStudent = await Student.create({
+            
+            let verif = await student.find({email: email})
+            if(verif){
+                res.status(404).json({
+                    status: false,
+                    message: "Compte existe déjà !!"
+                })
+                return 
+            }
+            const myMatric = matric(nom)
+            let matricAll =  await student.find({matricule:myMatric})
+            const matricule = !matricAll? myMatric:matric(nom)
+            const userStudent = await student.create({
                 nom: nom,
                 logo:`${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
-                matricule: matric(nom),
-                password: bcryptPass(password),
+                matricule:matricule ,
+                email:email,
+                password: await bcryptPass(password),
                 ...body
             })
             res.status(200).json({
@@ -21,14 +34,15 @@ export class Student {
                     message: "Inscription effectuée"
                 })  
         } catch (e) {
-            return res.json({ status: false, message: e.message });
+            // if(e instanceof MongooseError) throw Error(`Error: ${e.message}`)
+            return res.status(500).json({ status: false, message: e.message });
         }
     }
     
     static async getStudent(req, res){
         let {id} = req.params
         try {
-           let user =  await Student.findById(id)
+           let user =  await student.findById(id)
            if(user){
                 res.status(200).json({
                     status: true,
@@ -36,7 +50,11 @@ export class Student {
                 })
            }
         } catch (e) {
-            if(e instanceof MongooseError) throw new Error("Erreur: ", e.message)
+            if(e instanceof MongooseError) throw new Error("Erreur: ", "Error mongoose")
+            res.status(500).json({
+                status: false,
+                message: e.message
+        })
         }
     }
     static async editStudent(req, res){
@@ -45,13 +63,7 @@ export class Student {
         let auth = req.user;
 
        try {
-            let studentUser = await Student.findById(id);
-            if(!studentUser){
-                res.status(200).json({
-                    status: true,
-                    message: "Modification effectué avec succès !!!"
-                })
-            }
+            let studentUser = await student.findById(id);
             if(studentUser &&  id == auth._id){
                 if(logo && password){
                     studentUser.update({logo:`${req.protocol}://${req.get('host')}/images/${req.file.filename}`, password:bcryptPass(password), ...body})
@@ -75,7 +87,7 @@ export class Student {
        catch (e) {
             res.status(404).json({
                 status: false,
-                message: e
+                message: e.message
             })
        }
         
@@ -92,7 +104,7 @@ export class Student {
                     message: "Compte introuvable"
                 })
             }
-            await Student.deleteOne({_id: id});
+            await student.deleteOne({_id: id});
             res.status(201)
             .json({
                 status: true,
@@ -100,7 +112,7 @@ export class Student {
             })
             
         } catch (e) {
-            if(e instanceof MongooseError) throw new Error("Erreur: ",e.message);
+            if(e instanceof MongooseError) throw new Error("Erreur: ",e.message)
             res.status(500)
             .json({
                 status: true,
@@ -109,26 +121,33 @@ export class Student {
         }
     }
     static async loginStudent(req,res){
-        let {email, password} = req.params
+        console.log(req.body)
+        const {email, password} = req.body;
+        console.log(email)
         try {
-            let studentUser = await Student.findOne({email})
+            let studentUser = await student.findOne({email})
             if(studentUser && ( await comparePass(password,studentUser.password))){
-                req.cookies('token', generateJWT(studentUser.toObject()))
+                res.cookie('token', generateJWT(studentUser.toObject()))
                 return res.status(200)
                         .json({
                             status:true,
+                            
                             message: "Connexion encours"
                         })
             }
-            res.status(401).json({ status: false, message: 'identifiant invalide' });
+            else{
+                res.status(401).json({ status: false, message: 'identifiant invalide' });
+            }
+            
             
         } catch (e) {
-            if(e instanceof MongooseError) throw new Error("Erreur:",e.message)
+            // if(e instanceof MongooseError) throw new Error("Erreur:",e.message)
             res.status(500)
             .json({
-                status: true,
+                status: false,
                 message: e.message
             })
         }
     }
 }
+export default Student

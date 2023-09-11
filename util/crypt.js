@@ -1,11 +1,10 @@
-import { hash, compare } from "bcrypt";
-import bcrypt from "bcrypt"
+import bcrypt from "bcrypt";
 /**
  * 
  * @param {String} pass 
  */
 export const bcryptPass = async (pass)=>{
-    return await hash(pass, await bcrypt.genSalt(10))
+    return await bcrypt.hash(pass, await bcrypt.genSalt(10))
 }
 /**
  * 
@@ -15,7 +14,7 @@ export const bcryptPass = async (pass)=>{
  */
 export const comparePass = async (newPass, oldPass)=>{
     try {
-        return await compare(newPass, oldPass)
+        return await bcrypt.compare(newPass, oldPass)
     } catch (e) {
         console.log("error  for code", e)
         return false
